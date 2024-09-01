@@ -1,0 +1,22 @@
+# Archivos y carpetas de Go
+*.out
+*.test
+/vendor/
+/bin/
+/obj/
+/pkg/
+
+# Archivos temporales de editores
+*~
+*.swp
+*.swo
+
+# Archivos temporales del sistema
+*.tmp
+tmp/
+
+# Archivos de configuración del IDE
+.idea/
+.vscode/
+*.code-workspace
+.DS_Store
