@@ -1,4 +1,4 @@
-### Init 
+### Init bot
 ```go
 go run .
 
