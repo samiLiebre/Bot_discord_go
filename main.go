@@ -15,8 +15,20 @@ import (
 )
 
 func main() {
+	// Cargar variables de entorno desde el archivo .env
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatalf("Error cargando el archivo .env: %v", err)
+	}
+
+	// Obtener el token de Discord desde las variables de entorno
+	DISCORD_TOKEN := os.Getenv("DISCORD_TOKEN")
+	if DISCORD_TOKEN == "" {
+		log.Fatalf("DISCORD_TOKEN no está definido en el archivo .env")
+	}
+	
 	// Crea una nueva sesión de Discord usando el token del bot
-	dg, err := discordgo.New("Bot " + DISCORD_TOKEN)
+	dg, err := discordgo.New("Bot " + DISCORD_TOKEN )
 	if err != nil {
 		fmt.Println("Error creando sesión de Discord,", err)
 		return
