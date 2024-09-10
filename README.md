@@ -58,4 +58,6 @@ Make sure you have cloned the repository to your local machine.
 3. **You should see a message like** "Bot está corriendo. Presiona CTRL+C para salir." **in your console**
 
 
+## functions:
 
+info in the tags
