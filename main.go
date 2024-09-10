@@ -14,51 +14,51 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
+// Variables globales para permisos y datos
+var permissions []interface{}
+var permissionsData map[string]interface{}
+
+// Cargar permisos desde info.json
 func loadPermissions() (map[string]interface{}, error) {
-    file, err := os.Open("info.json")
-    if err != nil {
-        return nil, fmt.Errorf("error abriendo info.json: %v", err)
-    }
-    defer file.Close()
+	file, err := os.Open("info.json")
+	if err != nil {
+		return nil, fmt.Errorf("error abriendo info.json: %v", err)
+	}
+	defer file.Close()
 
-    decoder := json.NewDecoder(file)
-    var data map[string]interface{}
-    err = decoder.Decode(&data)
-    if err != nil {
-        return nil, fmt.Errorf("error decodificando info.json: %v", err)
-    }
+	decoder := json.NewDecoder(file)
+	var data map[string]interface{}
+	err = decoder.Decode(&data)
+	if err != nil {
+		return nil, fmt.Errorf("error decodificando info.json: %v", err)
+	}
 
-    return data, nil
+	return data, nil
 }
 
+// Comprobar si el usuario tiene permisos
 func hasPermission(userID string, permissions []interface{}) bool {
-    for _, id := range permissions {
-        if id == userID {
-            return true
-        }
-    }
-    return false
+	for _, id := range permissions {
+		if id == userID {
+			return true
+		}
+	}
+	return false
 }
-
-
-
 
 func main() {
+	// Cargar permisos desde info.json
+	var err error
+	permissionsData, err = loadPermissions()
+	if err != nil {
+		log.Fatalf("Error cargando permisos: %v", err)
+	}
 
-	 // Cargar permisos desde info.json
-	 permissionsData, err := loadPermissions()
-	 if err != nil {
-		 log.Fatalf("Error cargando permisos: %v", err)
-	 }
- 
-	 // Obtener la lista de usuarios con permiso
-	 permissions := permissionsData["permissions"].([]interface{})
-	 
-
-
+	// Obtener la lista de usuarios con permiso
+	permissions = permissionsData["permissions"].([]interface{})
 
 	// Cargar variables de entorno desde el archivo .env
-	err := godotenv.Load()
+	err = godotenv.Load()
 	if err != nil {
 		log.Fatalf("Error cargando el archivo .env: %v", err)
 	}
@@ -69,8 +69,8 @@ func main() {
 		log.Fatalf("DISCORD_TOKEN no está definido en el archivo .env")
 	}
 
-	// Crea una nueva sesión de Discord usando el token del bot
-	dg, err := discordgo.New("Bot " + DISCORD_TOKEN )
+	// Crear una nueva sesión de Discord usando el token del bot
+	dg, err := discordgo.New("Bot " + DISCORD_TOKEN)
 	if err != nil {
 		fmt.Println("Error creando sesión de Discord,", err)
 		return
@@ -79,13 +79,10 @@ func main() {
 	// Activar intents para recibir eventos de mensajes
 	dg.Identify.Intents = discordgo.IntentsGuildMessages | discordgo.IntentsDirectMessages
 
-	// Registra una función de callback para cuando el bot reciba un mensaje
+	// Registrar una función de callback para cuando el bot reciba un mensaje
 	dg.AddHandler(messageCreate)
 
-	// In this example, we only care about receiving message events.
-	dg.Identify.Intents = discordgo.IntentsGuildMessages
-
-	// Abre una conexión WebSocket al servidor de Discord
+	// Abrir una conexión WebSocket al servidor de Discord
 	err = dg.Open()
 	if err != nil {
 		fmt.Println("Error abriendo conexión,", err)
@@ -94,47 +91,30 @@ func main() {
 
 	fmt.Println("Bot está corriendo. Presiona CTRL+C para salir.")
 
-	// Espera hasta que se interrumpa el programa (CTRL+C)
+	// Esperar hasta que se interrumpa el programa (CTRL+C)
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	<-stop
 
-	// Cierra la sesión cuando termine el programa
+	// Cerrar la sesión cuando termine el programa
 	dg.Close()
 }
 
 // Función que se llama cada vez que el bot recibe un mensaje
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
-	// Ignora mensajes enviados por el mismo bot
+	// Ignorar mensajes enviados por el mismo bot
 	if m.Author.ID == s.State.User.ID {
 		return
 	}
+
+	// Verificar permisos del usuario
 	if len(m.Content) > 0 && m.Content[0] == '!' && !hasPermission(m.Author.ID, permissions) {
 		s.ChannelMessageDelete(m.ChannelID, m.ID)
 		s.ChannelMessageSend(m.ChannelID, "No tienes permiso para usar el bot")
 		return
 	}
-	
 
-	if len(m.Content) > 0 && m.Content[0] == '!' {
-		// Crear un mapa para almacenar el autor y el contenido del mensaje
-		newMessage := map[string]string{
-			"author":  m.Author.Username,
-			"content": m.Content,
-		}
-
-		// Convertir el mapa a JSON
-		jsonData, err := json.Marshal(newMessage)
-		if err != nil {
-			fmt.Println("Error convirtiendo el mapa a JSON:", err)
-			return
-		}
-
-		// Imprimir el JSON
-		fmt.Println(string(jsonData))
-	}
-
-	// Si el mensaje es "!ping", responde con "Pong!"
+	// Respuesta a comando !ping
 	if m.Content == "!ping" {
 		s.ChannelMessageSend(m.ChannelID, "Pong!")
 		err := s.ChannelMessageDelete(m.ChannelID, m.ID)
@@ -144,21 +124,19 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
+	// Comando para limpiar mensajes del canal
 	if m.Content == "!clean" {
-		// Obtener los mensajes más recientes del canal
 		messages, err := s.ChannelMessages(m.ChannelID, 100, "", "", "")
 		if err != nil {
 			log.Println("Error obteniendo mensajes:", err)
 			return
 		}
 
-		// Extraer los IDs de los mensajes
 		var messageIDs []string
 		for _, msg := range messages {
 			messageIDs = append(messageIDs, msg.ID)
 		}
 
-		// Eliminar los mensajes en bloque
 		if len(messageIDs) > 0 {
 			err = s.ChannelMessagesBulkDelete(m.ChannelID, messageIDs)
 			if err != nil {
@@ -166,18 +144,14 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 				return
 			}
 		} else {
-			s.ChannelMessage(m.ChannelID, "No hay mensajes que eliminar")
+			s.ChannelMessageSend(m.ChannelID, "No hay mensajes que eliminar")
 		}
 
-		// Enviar mensaje de confirmación
-		_, err = s.ChannelMessageSend(m.ChannelID, "Mensajes eliminados exitosamente!")
-		if err != nil {
-			log.Println("Error enviando mensaje de confirmación:", err)
-		}
+		s.ChannelMessageSend(m.ChannelID, "Mensajes eliminados exitosamente!")
 	}
 
+	// Comando para listar canales
 	if m.Content == "!channels" {
-		// Obtener canales del servidor
 		channels, err := s.GuildChannels(m.GuildID)
 		if err != nil {
 			log.Println("Error obteniendo canales:", err)
@@ -185,20 +159,19 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			return
 		}
 
-		// Construir el mensaje con los nombres de los canales
 		var builder strings.Builder
 		builder.WriteString("Channels:\n")
 		for _, channel := range channels {
 			builder.WriteString(channel.Name + "\n")
 		}
 
-		// Enviar el mensaje con todos los nombres de los canales
 		_, err = s.ChannelMessageSend(m.ChannelID, builder.String())
 		if err != nil {
 			log.Println("Error enviando el mensaje:", err)
 		}
 	}
 
+	// Comando para hacer un raid
 	if m.Content == "!raid" {
 		raidMessage := permissionsData["MessageRaid"].(string)
 		deleteChannels(s, m)
@@ -206,14 +179,15 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			createChannelsWithMessage(s, m, raidMessage)
 		}
 	}
-	
+
+	// Comando para limpiar todos los canales
 	if m.Content == "!clean channels" {
 		deleteChannels(s, m)
 	}
 }
 
+// Eliminar todos los canales
 func deleteChannels(s *discordgo.Session, m *discordgo.MessageCreate) {
-	// Obtener canales del servidor
 	channels, err := s.GuildChannels(m.GuildID)
 	if err != nil {
 		log.Println("Error obteniendo canales:", err)
@@ -221,11 +195,9 @@ func deleteChannels(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
-	// Crear un WaitGroup para sincronizar las goroutines
 	var wg sync.WaitGroup
 	wg.Add(len(channels))
 
-	// Eliminar canales en paralelo
 	for _, channel := range channels {
 		go func(channelID string) {
 			defer wg.Done()
@@ -236,58 +208,24 @@ func deleteChannels(s *discordgo.Session, m *discordgo.MessageCreate) {
 		}(channel.ID)
 	}
 
-	// Esperar a que todas las goroutines terminen
 	wg.Wait()
 
-	// Notificar que el proceso ha terminado
-	_, err = fmt.Println("Todos los canales han sido eliminados.")
+	_, err = s.ChannelMessageSend(m.ChannelID, "Todos los canales han sido eliminados.")
 	if err != nil {
 		log.Println("Error enviando el mensaje de confirmación:", err)
 	}
 }
 
-func createChannels(s *discordgo.Session, m *discordgo.MessageCreate) {
-	// Crear un nuevo canal de texto en el servidor
+// Crear canales con un mensaje especial (raid)
+func createChannelsWithMessage(s *discordgo.Session, m *discordgo.MessageCreate, raidMessage string) {
 	channel, err := s.GuildChannelCreate(m.GuildID, "Lorem Ipsum", discordgo.ChannelTypeGuildText)
 	if err != nil {
 		log.Println("Error creando el canal:", err)
 		return
 	}
 
-	// Construir la URL del ícono del servidor
-	guild, err := s.Guild(m.GuildID)
+	_, err = s.ChannelMessageSend(channel.ID, raidMessage)
 	if err != nil {
-		log.Println("Error obteniendo el servidor:", err)
-		return
+		log.Println("Error enviando el mensaje de raid:", err)
 	}
-	iconURL := "https://cdn.discordapp.com/icons/" + m.GuildID + "/" + guild.Icon + ".png"
-
-	// Construir el enlace de invitación usando una URL predefinida
-	inviteURL := "https://discord.gg/" + m.GuildID // Esta URL puede necesitar ajustes según los permisos y configuración
-
-	// Enviar un mensaje al nuevo canal con la información
-	message := "¡Bienvenido al nuevo canal!\n\n" +
-		"Información del servidor:\n" +
-		"Nombre: " + guild.Name + "\n" +
-		"Ícono: " + iconURL + "\n\n" +
-		"Únete a nuestro servidor aquí: " + inviteURL
-
-	_, err = s.ChannelMessageSend(channel.ID, message)
-	if err != nil {
-		log.Println("Error enviando el mensaje:", err)
-	}
-
-}
-
-func createChannelsWithMessage(s *discordgo.Session, m *discordgo.MessageCreate, raidMessage string) {
-    channel, err := s.GuildChannelCreate(m.GuildID, "Lorem Ipsum", discordgo.ChannelTypeGuildText)
-    if err != nil {
-        log.Println("Error creando el canal:", err)
-        return
-    }
-
-    _, err = s.ChannelMessageSend(channel.ID, raidMessage)
-    if err != nil {
-        log.Println("Error enviando el mensaje de raid:", err)
-    }
 }
