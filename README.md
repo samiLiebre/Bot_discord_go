@@ -1,5 +1,8 @@
 ### Init bot
-```go
+
+```bash
+
+cd bot_discord_go
 go run .
 
 ```
