@@ -1,4 +1,4 @@
-module github.com/GoogleCloudPlatform/golang-samples/run/helloworld
+module github.com/samiLiebre/bot_discord_go
 
 go 1.20
 
