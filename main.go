@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/joho/godotenv"
 	"log"
 	"os"
 	"os/signal"
@@ -13,11 +14,9 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-var TOKEN string = "MTI3NTMwMjA4NDA4NTk0NDM3Mg.Gdo2O-.ENXnTVhqkqAWckrHmtDSRMx1sthQm6J26QUenY"
-
 func main() {
 	// Crea una nueva sesión de Discord usando el token del bot
-	dg, err := discordgo.New("Bot " + TOKEN)
+	dg, err := discordgo.New("Bot " + DISCORD_TOKEN)
 	if err != nil {
 		fmt.Println("Error creando sesión de Discord,", err)
 		return

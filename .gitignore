@@ -5,6 +5,7 @@
 /bin/
 /obj/
 /pkg/
+/tmp/
 
 # Archivos temporales de editores
 *~
@@ -20,3 +21,7 @@ tmp/
 .vscode/
 *.code-workspace
 .DS_Store
+.idx
+
+# variables de entorno 
+.env
