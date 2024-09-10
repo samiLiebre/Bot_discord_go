@@ -16,6 +16,7 @@ Make sure you have cloned the repository to your local machine.
    - Open the renamed file in a text editor.
    - Look for the line starting with `DISCORD_TOKEN`.
    - Replace `your-bot-token-here` with your actual Discord bot token. For example:
+     
      ```env
      DISCORD_TOKEN=your-actual-bot-token
      ```
